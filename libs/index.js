@@ -11,7 +11,7 @@ function Redist(opts) {
   opts = opts || {};
   this.maxRetries = opts.maxRetries || 10;
   this.retryDelay = opts.retryDelay || 50;
-  this.retryCount = 0;
+  this.backoff = !!opts.backoff;
   this.pool = require('redisp')(opts);
 }
 
@@ -67,10 +67,13 @@ Redist.prototype.transact = function(readF, writeF, endF) {
       debug('retry: %d', retryCount);
       if(retryCount > self.maxRetries)
         return endF(new Error('Maximum number of retries reached'));
-      var delay = self.retryDelay * retryCount;
+      var delay = self.retryDelay;
+      if(self.backoff) {
+        delay *= retryCount;
+      }
       setTimeout(function() {
         self.transact(readF, writeF, endF);
-      }, delay * 0.85 + Math.random() * 0.3);
+      }, delay * (0.9 + Math.random() * 0.2));
     }
     else {
       debug('end: %s', JSON.stringify(results.write.result));
