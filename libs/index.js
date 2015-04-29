@@ -82,7 +82,7 @@ Redist.prototype.transact = function(readF, writeF, endF) {
     }
     else {
       debug('end: %s', JSON.stringify(results.write.result));
-      endF(null, results.write.result);
+      endF(null, results.write.result, results.exec);
     }
   });
 };

@@ -203,7 +203,9 @@ describe('Redis Transaction', function() {
             var number = +results[0] * 5;
             write.set('test', number);
             callback(null, number);
-          }, callback);
+          }, function(err, results, multi) {
+            callback(err, results);
+          });
         }]
       }, function(err, results) {
         if(results.conn) results.conn.release();
@@ -254,7 +256,9 @@ describe('Redis Transaction', function() {
             setTimeout(function() {
               callback(null, number);
             },500);
-          }, callback);
+          }, function(err, results, multi) {
+            callback(err, results);
+          });
         }],
         transact2: ['set', function(callback) {
           setTimeout(function() {
@@ -265,7 +269,9 @@ describe('Redis Transaction', function() {
               var number = +results[0] * 5;
               write.set('test', number);
               callback(null, number);
-            }, callback);
+            }, function(err, results, multi) {
+              callback(err, results);
+            });
           }, 250);
         }]
       }, function(err, results) {
