@@ -67,8 +67,11 @@ Redist.prototype.transact = function(readF, writeF, endF) {
     if(!results.exec) {
       retryCount++;
       debug('retry: %d', retryCount);
-      if(retryCount > self.maxRetries)
-        return endF(new Error('Maximum number of retries reached'));
+      if(retryCount > self.maxRetries) {
+        err = new Error('Maximum number of retries reached');
+        err.code = 'ERR_FATAL';
+        return endF(err);
+      }
       var delay = self.retryDelay;
       if(self.backoff) {
         delay *= retryCount;
