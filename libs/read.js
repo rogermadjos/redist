@@ -13,7 +13,7 @@ var loggers = {
 
 var READ_CMDS = [
   'hexists','hget','hgetall','hkeys','hlen','hmget','hstrlen','hvals',
-  'exists','lindex','llen','scard','sismember','sismembers','srandmember',
+  'exists','lindex','llen','scard','sismember','smembers','srandmember',
   'zcard','zcount','zlexcount','zrange','zrangebylex','zrevrangebylex',
   'zrangebyscore','zrank','zrevrange','zrevrangebyscore','zrevrank','zscore',
   'get','getbit','getrange','strlen'
