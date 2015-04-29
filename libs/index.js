@@ -26,6 +26,7 @@ Redist.prototype.transact = function(readF, writeF, endF) {
       var read = new Read(results.conn);
       var d = domain.create();
       d.on('error', function(err) {
+        err.code = 'ERR_FATAL';
         callback(err);
       });
       d.run(function() {
@@ -39,6 +40,7 @@ Redist.prototype.transact = function(readF, writeF, endF) {
       var multi = results.conn.multi();
       var d = domain.create();
       d.on('error', function(err) {
+        err.code = 'ERR_FATAL';
         callback(err);
       });
       d.run(function() {
