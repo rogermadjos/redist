@@ -12,9 +12,9 @@ npm install redist --save
 
 ## How to use
 ```js
-var redist = require('../index')();
+var redist = require('redist')();
 
-redist(function(read, done) {
+var transact = redist.transact(function(read, done) {
 	// read block
 	read.smembers('users').now(function(err, results) {
 		read.group();
@@ -34,6 +34,18 @@ redist(function(read, done) {
 	done(null, total);
 }, function(err, result) {
 	// finished
+});
+
+transact.on('error', function(err) {
+	// when error occurs
+});
+
+transact.on('retry', function(num) {
+	// num - number of retries
+});
+
+transact.on('end', function(results) {
+	// when transaction ends
 });
 
 ```
