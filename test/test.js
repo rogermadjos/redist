@@ -221,20 +221,47 @@ describe('Redis Transaction', function() {
       }, function(write, results, callback) {
         callback();
       }, function(err) {
+        expect(err.code).to.equal('ERR_FATAL');
+        expect(err.message).to.equal('error');
+        done();
+      });
+    });
+
+    it('should handle error correctly', function(done) {
+      redist.transact(function(read, callback) {
+        var err = new Error('error');
+        err.code = 'ERR';
+        callback(err);
+      }, function(write, results, callback) {
+        callback();
+      }, function(err) {
+        expect(err.code).to.equal('ERR');
         expect(err.message).to.equal('error');
         done();
       });
     });
 
     it('should catch uncaught exceptions', function(done) {
-      var obj = redist.transact(function(read, callback) {
+      redist.transact(function(read, callback) {
         callback();
       }, function(write, results, callback) {
         throw new Error('error');
       }, function(err) {
+        expect(err.code).to.equal('ERR_FATAL');
         expect(err.message).to.equal('error');
+        done();
       });
-      obj.on('error', function(err) {
+    });
+
+    it('should handle error correctly', function(done) {
+      redist.transact(function(read, callback) {
+        callback();
+      }, function(write, results, callback) {
+        var err = new Error('error');
+        err.code = 'ERR';
+        callback(err);
+      }, function(err) {
+        expect(err.code).to.equal('ERR');
         expect(err.message).to.equal('error');
         done();
       });

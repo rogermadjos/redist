@@ -27,7 +27,9 @@ var transaction = function(conn, readF, writeF, callback) {
       var read = new Read(conn);
       var d = domain.create();
       d.on('error', function(err) {
-        err.code = 'ERR_FATAL';
+        if(!err.code) {
+          err.code = 'ERR_FATAL';
+        }
         callback(err);
       });
       d.run(function() {
@@ -41,7 +43,9 @@ var transaction = function(conn, readF, writeF, callback) {
       var multi = conn.multi();
       var d = domain.create();
       d.on('error', function(err) {
-        err.code = 'ERR_FATAL';
+        if(!err.code) {
+          err.code = 'ERR_FATAL';
+        }
         callback(err);
       });
       d.run(function() {
