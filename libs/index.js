@@ -6,6 +6,8 @@ var Read = require('./read');
 var async = require('async');
 var domain = require('domain');
 var debug = require('debug')('redist:transact');
+var util = require('util');
+var events = require('events');
 
 function Redist(opts) {
   opts = opts || {};
@@ -14,6 +16,8 @@ function Redist(opts) {
   this.backoff = !!opts.backoff;
   this.pool = require('redisp')(opts);
 }
+
+util.inherits(Redist, events.EventEmitter);
 
 Redist.prototype.transact = function(readF, writeF, endF) {
   var self = this;
@@ -67,6 +71,7 @@ Redist.prototype.transact = function(readF, writeF, endF) {
     if(!results.exec) {
       retryCount++;
       debug('retry: %d', retryCount);
+      self.emit('retry', retryCount);
       if(retryCount > self.maxRetries) {
         err = new Error('Maximum number of retries reached');
         err.code = 'ERR_FATAL';
