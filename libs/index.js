@@ -12,22 +12,21 @@ var events = require('events');
 function Redist(opts) {
   opts = opts || {};
   this.maxRetries = opts.maxRetries || 10;
-  this.retryDelay = opts.retryDelay || 50;
-  this.backoff = !!opts.backoff;
+  this.backoff = _.assign({
+    initialDelay: 50,
+    maxDelay: 5000,
+    factor: 1.5,
+    randomizationFactor: 0.5
+  }, opts.backoff || {});
   this.pool = require('redisp')(opts);
 }
 
 util.inherits(Redist, events.EventEmitter);
 
-Redist.prototype.transact = function(readF, writeF, endF) {
-  var self = this;
-  var retryCount = 0;
+var transaction = function(conn, readF, writeF, callback) {
   async.auto({
-    conn: function(callback) {
-      self.pool.borrow(callback);
-    },
-    read: ['conn', function(callback, results) {
-      var read = new Read(results.conn);
+    read: function(callback) {
+      var read = new Read(conn);
       var d = domain.create();
       d.on('error', function(err) {
         err.code = 'ERR_FATAL';
@@ -39,9 +38,9 @@ Redist.prototype.transact = function(readF, writeF, endF) {
           read.execAll(callback);
         });
       });
-    }],
+    },
     write: ['read', function(callback, results) {
-      var multi = results.conn.multi();
+      var multi = conn.multi();
       var d = domain.create();
       d.on('error', function(err) {
         err.code = 'ERR_FATAL';
@@ -59,36 +58,56 @@ Redist.prototype.transact = function(readF, writeF, endF) {
     exec: ['write', function(callback, results) {
       results.write.multi.exec(callback);
     }]
+  }, callback);
+};
+
+Redist.prototype.transact = function(readF, writeF, endF) {
+  var self = this;
+  var retryCount = 0;
+  var lastDelay = 0;
+  async.auto({
+    conn: function(callback) {
+      self.pool.borrow(callback);
+    },
+    transact: ['conn', function(callback, results) {
+      var conn = results.conn;
+      var operation = function() {
+        transaction(conn, readF, writeF, function(err, results) {
+          if(err) return callback(err);
+          if(results.exec) {
+            debug('end: %o %o', results.write.result, results.exec);
+            callback(null, results);
+          }
+          else {
+            if(retryCount >= self.maxRetries) {
+              err = new Error('Maximum number of retries reached');
+              err.code = 'ERR_FATAL';
+              callback(err);
+            }
+            else {
+              var delay = self.backoff.initialDelay * Math.pow(self.backoff.factor, retryCount++);
+              var randomAdd = (delay - lastDelay) * Math.random() * self.backoff.randomizationFactor;
+              lastDelay = delay;
+              delay += randomAdd * ((Math.random() > 0.5)?1:-1);
+              setTimeout(function() {
+                debug('retry: %d', retryCount);
+                self.emit('retry', retryCount);
+                operation();
+              }, delay);
+            }
+          }
+        });
+      };
+      operation();
+    }]
   }, function(err, results) {
     if(results.conn) {
-      results.conn.unwatch(function(err) {
+      results.conn.unwatch(function() {
         results.conn.release();
-        if(err) endF(err);
       });
     }
     if(err) return endF(err);
-    //interrupted
-    if(!results.exec) {
-      retryCount++;
-      debug('retry: %d', retryCount);
-      self.emit('retry', retryCount);
-      if(retryCount > self.maxRetries) {
-        err = new Error('Maximum number of retries reached');
-        err.code = 'ERR_FATAL';
-        return endF(err);
-      }
-      var delay = self.retryDelay;
-      if(self.backoff) {
-        delay *= retryCount;
-      }
-      setTimeout(function() {
-        self.transact(readF, writeF, endF);
-      }, delay * (0.9 + Math.random() * 0.2));
-    }
-    else {
-      debug('end: %s', JSON.stringify(results.write.result));
-      endF(null, results.write.result, results.exec);
-    }
+    endF(null, results.transact.write.result, results.transact.exec);
   });
 };
 
