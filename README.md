@@ -45,8 +45,11 @@ redist(function(read, done) {
 var redist = require('../index')(opts);
 ```
 - `maxRetries`(`10`) - maximum number of retries before `redist` returns an error.
-- `retryDelay`(`50`) - number of milliseconds to wait before next try is attempted.
-- `backoff`(`false`) - determines whether to progressively increase `retryDelay`. If set to `true`, `retryDelay` is multiplied by the number of retries.
+- `backoff` - object containing options for exponential backoff strategy.
+	- `initialDelay`(`50`) - delay of the first retry.
+	- `maxDelay`(`5000`) - maximum delay.
+	- `factor`(`2`) - must be greater than 1.
+	- `randomizationFactor`(`0.2`) - must be between 0 and 1.
 
 For other options, please see [`redisp`](https://www.npmjs.com/package/redisp).
 

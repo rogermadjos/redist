@@ -6,8 +6,7 @@ var Read = require('./read');
 var async = require('async');
 var domain = require('domain');
 var debug = require('debug')('redist:transact');
-var util = require('util');
-var events = require('events');
+var EventEmitter = require('events').EventEmitter;
 
 function Redist(opts) {
   opts = opts || {};
@@ -15,13 +14,12 @@ function Redist(opts) {
   this.backoff = _.assign({
     initialDelay: 50,
     maxDelay: 5000,
-    factor: 1.5,
-    randomizationFactor: 0.5
+    factor: 2,
+    randomizationFactor: 0.2
   }, opts.backoff || {});
   this.pool = require('redisp')(opts);
+  this.count = 0;
 }
-
-util.inherits(Redist, events.EventEmitter);
 
 var transaction = function(conn, readF, writeF, callback) {
   async.auto({
@@ -64,7 +62,11 @@ var transaction = function(conn, readF, writeF, callback) {
 Redist.prototype.transact = function(readF, writeF, endF) {
   var self = this;
   var retryCount = 0;
-  var lastDelay = 0;
+  var emitter = new EventEmitter();
+  var id = this.count++;
+  debug('started: %o', { id:id });
+  var timestamp = Date.now();
+  endF = endF || _.noop;
   async.auto({
     conn: function(callback) {
       self.pool.borrow(callback);
@@ -75,7 +77,6 @@ Redist.prototype.transact = function(readF, writeF, endF) {
         transaction(conn, readF, writeF, function(err, results) {
           if(err) return callback(err);
           if(results.exec) {
-            debug('end: %o %o', results.write.result, results.exec);
             callback(null, results);
           }
           else {
@@ -86,12 +87,11 @@ Redist.prototype.transact = function(readF, writeF, endF) {
             }
             else {
               var delay = self.backoff.initialDelay * Math.pow(self.backoff.factor, retryCount++);
-              var randomAdd = (delay - lastDelay) * Math.random() * self.backoff.randomizationFactor;
-              lastDelay = delay;
-              delay += randomAdd * ((Math.random() > 0.5)?1:-1);
+              delay += delay * Math.random() * self.backoff.randomizationFactor * ((Math.random() > 0.5)?1:-1);
+              delay = Math.min(delay, self.backoff.maxDelay);
               setTimeout(function() {
-                debug('retry: %d', retryCount);
-                self.emit('retry', retryCount);
+                debug('retry: %o', { id: id, retryCount: retryCount });
+                emitter.emit('retry', retryCount);
                 operation();
               }, delay);
             }
@@ -102,13 +102,28 @@ Redist.prototype.transact = function(readF, writeF, endF) {
     }]
   }, function(err, results) {
     if(results.conn) {
-      results.conn.unwatch(function() {
+      results.conn.unwatch(function(err) {
         results.conn.release();
+        if(err) emitter.emit('error', err);
       });
     }
-    if(err) return endF(err);
+    if(err) {
+      emitter.emit('error', err);
+      return endF(err);
+    }
+    debug('end: %o', {
+      id: id,
+      results: results.transact.write.result,
+      execResults: results.transact.exec,
+      execTime: Date.now() - timestamp
+    });
+    emitter.emit('end', {
+      results: results.transact.write.result,
+      execResults: results.transact.exec
+    });
     endF(null, results.transact.write.result, results.transact.exec);
   });
+  return emitter;
 };
 
 module.exports = function(opts) {

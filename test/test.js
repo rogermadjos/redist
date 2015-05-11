@@ -227,11 +227,14 @@ describe('Redis Transaction', function() {
     });
 
     it('should catch uncaught exceptions', function(done) {
-      redist.transact(function(read, callback) {
+      var obj = redist.transact(function(read, callback) {
         callback();
       }, function(write, results, callback) {
         throw new Error('error');
       }, function(err) {
+        expect(err.message).to.equal('error');
+      });
+      obj.on('error', function(err) {
         expect(err.message).to.equal('error');
         done();
       });
