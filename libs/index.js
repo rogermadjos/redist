@@ -69,6 +69,7 @@ Redist.prototype.transact = function(readF, writeF, endF) {
   var self = this;
   var retryCount = 0;
   var emitter = new EventEmitter();
+  emitter.on('error', _.noop);
   var id = this.count++;
   debug('started: %o', { id:id });
   var timestamp = Date.now();
