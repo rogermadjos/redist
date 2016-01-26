@@ -215,18 +215,6 @@ describe('Redis Transaction', function() {
       });
     });
 
-    it('should catch uncaught exceptions', function(done) {
-      redist.transact(function(read, callback) {
-        throw new Error('error');
-      }, function(write, results, callback) {
-        callback();
-      }, function(err) {
-        expect(err.code).to.equal('ERR_FATAL');
-        expect(err.message).to.equal('error');
-        done();
-      });
-    });
-
     it('should handle error correctly', function(done) {
       redist.transact(function(read, callback) {
         var err = new Error('error');
@@ -240,19 +228,7 @@ describe('Redis Transaction', function() {
         done();
       });
     });
-
-    it('should catch uncaught exceptions', function(done) {
-      redist.transact(function(read, callback) {
-        callback();
-      }, function(write, results, callback) {
-        throw new Error('error');
-      }, function(err) {
-        expect(err.code).to.equal('ERR_FATAL');
-        expect(err.message).to.equal('error');
-        done();
-      });
-    });
-
+    
     it('should handle error correctly', function(done) {
       redist.transact(function(read, callback) {
         callback();

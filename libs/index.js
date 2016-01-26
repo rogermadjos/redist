@@ -4,7 +4,6 @@
 var _ = require('lodash');
 var Read = require('./read');
 var async = require('async');
-var domain = require('domain');
 var debug = require('debug')('redist:transact');
 var EventEmitter = require('events').EventEmitter;
 
@@ -25,37 +24,19 @@ var transaction = function(conn, readF, writeF, callback) {
   async.auto({
     read: function(callback) {
       var read = new Read(conn);
-      var d = domain.create();
       callback = _.once(callback);
-      d.on('error', function(err) {
-        if(!err.code) {
-          err.code = 'ERR_FATAL';
-        }
-        callback(err);
-      });
-      d.run(function() {
-        readF(read, function(err) {
-          if(err) return callback(err);
-          read.execAll(callback);
-        });
+      readF(read, function(err) {
+        if(err) return callback(err);
+        read.execAll(callback);
       });
     },
     write: ['read', function(callback, results) {
       var multi = conn.multi();
-      var d = domain.create();
       callback = _.once(callback);
-      d.on('error', function(err) {
-        if(!err.code) {
-          err.code = 'ERR_FATAL';
-        }
-        callback(err);
-      });
-      d.run(function() {
-        writeF(multi, results.read, function(err, obj) {
-          callback(err, {
-            multi: multi,
-            result: obj
-          });
+      writeF(multi, results.read, function(err, obj) {
+        callback(err, {
+          multi: multi,
+          result: obj
         });
       });
     }],
