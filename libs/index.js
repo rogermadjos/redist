@@ -11,8 +11,8 @@ var redis = require( 'redis' );
 
 function Redist ( opts ) {
   opts = opts || {};
-  this.maxRetries = opts.maxRetries || 5;
-  this.maxConnections = opts.maxConnections || 10;
+  this.maxRetries = opts.maxRetries || 10;
+  this.maxConnections = opts.maxConnections || 25;
   this.backoff = _.assign( {
     initialDelay: 50,
     maxDelay: 5000,
