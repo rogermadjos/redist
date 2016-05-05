@@ -6,18 +6,32 @@ var Read = require( './read' );
 var async = require( 'async' );
 var debug = require( 'debug' )( 'redist:transact' );
 var EventEmitter = require( 'events' ).EventEmitter;
+var Pool = require( 'generic-pool' ).Pool;
+var redis = require( 'redis' );
 
 function Redist ( opts ) {
   opts = opts || {};
-  this.maxRetries = opts.maxRetries || 10;
+  this.maxRetries = opts.maxRetries || 5;
+  this.maxConnections = opts.maxConnections || 10;
   this.backoff = _.assign( {
     initialDelay: 50,
     maxDelay: 5000,
     factor: 2,
     randomizationFactor: 0.2
   }, opts.backoff || {} );
-  this.pool = require( 'redisp' )( opts );
   this.count = 0;
+  this.pool = new Pool( {
+    name: 'redis',
+    create: function( callback ) {
+      var conn = redis.createClient( opts );
+      callback( null, conn );
+    },
+    destroy: function( conn ) {
+      conn.quit();
+    },
+    max: this.maxConnections,
+    idleTimeoutMillis: 60000
+  } );
 }
 
 var transaction = function( conn, readF, writeF, callback ) {
@@ -59,7 +73,7 @@ Redist.prototype.transact = function( readF, writeF, endF ) {
   endF = endF || _.noop;
   async.auto( {
     conn: function( callback ) {
-      self.pool.borrow( callback );
+      self.pool.acquire( callback );
     },
     transact: [ 'conn', function( callback, results ) {
       var conn = results.conn;
@@ -93,7 +107,7 @@ Redist.prototype.transact = function( readF, writeF, endF ) {
   }, function( err, results ) {
     if ( results.conn ) {
       results.conn.unwatch( function( err ) {
-        results.conn.release();
+        self.pool.release( results.conn );
         if ( err ) {
           emitter.emit( 'error', err );
         }

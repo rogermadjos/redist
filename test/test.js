@@ -3,14 +3,15 @@
 var expect = require( 'chai' ).expect;
 var redist = require( '../index' )();
 var Read = require( '../libs/read' );
-var pool = require( 'redisp' )();
 var async  = require( 'async' );
 var _ = require( 'lodash' );
+
+var pool = redist.pool;
 
 describe( 'Redis Transaction', function() {
 
   before( function( done ) {
-    pool.borrow( function( err, conn ) {
+    pool.acquire( function( err, conn ) {
       if ( err ) {
         return done( err );
       }
@@ -24,7 +25,7 @@ describe( 'Redis Transaction', function() {
           if ( err ) {
             return done( err );
           }
-          conn.release();
+          pool.release( conn );
           done();
         } );
       } );
@@ -35,7 +36,7 @@ describe( 'Redis Transaction', function() {
     it( 'should execute command', function( done ) {
       async.auto( {
         conn: function( callback ) {
-          pool.borrow( callback );
+          pool.acquire( callback );
         },
         get: [ 'conn', function( callback, results ) {
           var read = new Read( results.conn );
@@ -47,7 +48,7 @@ describe( 'Redis Transaction', function() {
         } ]
       }, function( err, results ) {
         if ( results.conn ) {
-          results.conn.release();
+          pool.release( results.conn );
         }
         if ( err ) {
           return done( err );
@@ -59,7 +60,7 @@ describe( 'Redis Transaction', function() {
     it( 'should return the results of multiple read operations', function( done ) {
       async.auto( {
         conn: function( callback ) {
-          pool.borrow( callback );
+          pool.acquire( callback );
         },
         get: [ 'conn', function( callback, results ) {
           var read = new Read( results.conn );
@@ -70,7 +71,7 @@ describe( 'Redis Transaction', function() {
         } ]
       }, function( err, results ) {
         if ( results.conn ) {
-          results.conn.release();
+          pool.release( results.conn );
         }
         if ( err ) {
           return done( err );
@@ -84,7 +85,7 @@ describe( 'Redis Transaction', function() {
     it( 'should group together the results of multiple read operations', function( done ) {
       async.auto( {
         conn: function( callback ) {
-          pool.borrow( callback );
+          pool.acquire( callback );
         },
         get: [ 'conn', function( callback, results ) {
           var read = new Read( results.conn );
@@ -97,7 +98,7 @@ describe( 'Redis Transaction', function() {
         } ]
       }, function( err, results ) {
         if ( results.conn ) {
-          results.conn.release();
+          pool.release( results.conn );
         }
         if ( err ) {
           return done( err );
@@ -112,7 +113,7 @@ describe( 'Redis Transaction', function() {
     it( 'should group together the results of multiple read operations', function( done ) {
       async.auto( {
         conn: function( callback ) {
-          pool.borrow( callback );
+          pool.acquire( callback );
         },
         get: [ 'conn', function( callback, results ) {
           var read = new Read( results.conn );
@@ -136,7 +137,7 @@ describe( 'Redis Transaction', function() {
         } ]
       }, function( err, results ) {
         if ( results.conn ) {
-          results.conn.release();
+          pool.release( results.conn );
         }
         if ( err ) {
           return done( err );
@@ -157,7 +158,7 @@ describe( 'Redis Transaction', function() {
     it( 'should immediately return the result of read operation', function( done ) {
       async.auto( {
         conn: function( callback ) {
-          pool.borrow( callback );
+          pool.acquire( callback );
         },
         get: [ 'conn', function( callback, results ) {
           var read = new Read( results.conn );
@@ -189,7 +190,7 @@ describe( 'Redis Transaction', function() {
         } ]
       }, function( err, results ) {
         if ( results.conn ) {
-          results.conn.release();
+          pool.release( results.conn );
         }
         if ( err ) {
           return done( err );
@@ -214,7 +215,7 @@ describe( 'Redis Transaction', function() {
     it( 'should be able to perform a simple redis transaction', function( done ) {
       async.auto( {
         conn: function( callback ) {
-          pool.borrow( callback );
+          pool.acquire( callback );
         },
         set: [ 'conn', function( callback, results ) {
           results.conn.set( 'test', 5, callback );
@@ -233,7 +234,7 @@ describe( 'Redis Transaction', function() {
         } ]
       }, function( err, results ) {
         if ( results.conn ) {
-          results.conn.release();
+          pool.release( results.conn );
         }
         if ( err ) {
           return done( err );
@@ -275,7 +276,7 @@ describe( 'Redis Transaction', function() {
       this.timeout( 5000 );
       async.auto( {
         conn: function( callback ) {
-          pool.borrow( callback );
+          pool.acquire( callback );
         },
         set: [ 'conn', function( callback, results ) {
           results.conn.set( 'test', 5, callback );
@@ -310,7 +311,7 @@ describe( 'Redis Transaction', function() {
         } ]
       }, function( err, results ) {
         if ( results.conn ) {
-          results.conn.release();
+          pool.release( results.conn );
         }
         if ( err ) {
           return done( err );
