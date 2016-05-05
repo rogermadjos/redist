@@ -24,5 +24,48 @@
   "devDependencies": {
     "chai": "^2.2.0",
     "mocha": "^2.2.1"
+  },"jshintConfig": {
+    "node": true,
+    "undef": true,
+    "unused": true,
+    "sub": true,
+    "validthis": true,
+    "eqeqeq": true,
+    "strict": true,
+    "forin": true,
+    "freeze": true,
+    "globals": {
+      "describe": true,
+      "it": true,
+      "before": true,
+      "after": true
+    }
+  },
+  "jscsConfig": {
+    "preset": "jquery",
+    "fileExtensions": [
+      "js"
+    ],
+    "requireCurlyBraces": true,
+    "requireSemicolons": true,
+    "requireSpacesInFunctionDeclaration": {
+      "beforeOpeningRoundBrace": true,
+      "beforeOpeningCurlyBrace": true
+    },
+    "disallowQuotedKeysInObjects": {
+      "allExcept": [
+        "reserved"
+      ]
+    },
+    "validateIndentation": 2,
+    "maximumLineLength": 125,
+    "validateLineBreaks": "LF",
+    "disallowTrailingComma": true,
+    "disallowUnusedParams": true,
+    "disallowImplicitTypeConversion": [
+      "string"
+    ],
+    "validateQuoteMarks": "'",
+    "requirePaddingNewLinesBeforeLineComments": false
   }
 }
